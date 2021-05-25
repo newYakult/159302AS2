@@ -27,7 +27,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#include <string.h>
+#include <string>
 #include <iostream>
 #include <fstream>
 #include <deque>
@@ -264,10 +264,10 @@ void displayInfo(const WorldStateType& s, const string msg="", const string time
 
 
 
-double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f, unsigned medium_f, unsigned large_f){
+void runInvertedPendulum(){
 	
 	using std::chrono::system_clock;
-	double lasted;
+
 	float inputs[4];
 	
 	WorldStateType prevState, newState;
@@ -294,9 +294,9 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
 	
 	//Start somewhere on the left
 	//Cart cart(-1.0, worldBoundary.y2 + 0.06);
-	Cart cart(-1.0, worldBoundary.y2 + 0.125);
+	Cart cart(1.0, worldBoundary.y2 + 0.125);
 	//Rod rod(-1.0, worldBoundary.y2 + 0.06);
-	Rod rod(-1.0, worldBoundary.y2 + 0.125 + 0.35);
+	Rod rod(1.0, worldBoundary.y2 + 0.125 + 0.35);
 	
 	//---------------------------------------------------------------
     //***************************************************************
@@ -305,7 +305,7 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
 	prevState.angle = 25.0 * (3.14/180);  //initial angle  = 35 degrees
 	
 	
-    initFuzzySystem(&g_fuzzy_system, A, B, C, D, small_f, medium_f, large_f);	
+    initFuzzySystem(&g_fuzzy_system);	
 	
 	//~ display_All_MF (g_fuzzy_system);
     //~ getch();
@@ -325,13 +325,13 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
             prevState.init();
         	prevState.x = 1.0;
 
-		    //cout << "Enter initial angle [-60, 60], (to exit, leave it blank): ";
+		    cout << "Enter initial angle [-60, 60], (to exit, leave it blank): ";
 		    
 
 		    input_angle=-90;
 
-		    std::string input = "30";
-		    //std::getline( std::cin, input );
+		    std::string input;
+		    std::getline( std::cin, input );
 		    if ( !input.empty() ) {
 		        std::istringstream stream( input );
 		        stream >> input_angle;
@@ -341,8 +341,6 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
 		    if( (input_angle < -60) || (input_angle > 60) ){
 		    	done = true;
 		    }
-			//to be removed
-			done = true;
 
 		    if(input_angle == 0.0){ //perturb by 0.1 degrees if initial angle is set to 0
 		    	input_angle = 0.1 * (3.14/180); 
@@ -370,13 +368,12 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
 		         //1) Enable this only after your fuzzy system has been completed already.
 		         //Remember, you need to define the rules, membership function parameters and rule outputs.
 		         prevState.F = fuzzy_system(inputs, g_fuzzy_system); //call the fuzzy controller
-				 //cout << "Giving force: " << prevState.F << endl;
 				 
-				 externalForce=0.0;
-				 externalForce = getKey(); //manual operation
+				 //externalForce=0.0;
+				 //externalForce = getKey(); //manual operation
 				 
-				 if(externalForce != 0.0)
-				 	prevState.F = externalForce;
+				 //if(externalForce != 0.0)
+				 //	prevState.F = externalForce;
 		         
 		         if(DEBUG_MODE){
 		           cout << "F = " << prevState.F << endl; //for debugging purposes only
@@ -455,8 +452,7 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
     auto end = std::chrono::system_clock::now();
 
 	std::chrono::duration<double> elapsed_seconds = end-start;
-	lasted = elapsed_seconds.count();
-    string timeStr = to_string(lasted); 
+    string timeStr = to_string(elapsed_seconds.count()); 
     timeStr = timeStr + " sec.";
 	
 	// cout << "timeElapsed = " << elapsed_seconds.count() << endl;
@@ -468,8 +464,7 @@ double runInvertedPendulum(float A, float B, float C, float D, unsigned small_f,
 		
 	
     //2) Enable this only after your fuzzy system has been completed already.
-	free_fuzzy_rules(&g_fuzzy_system);
-	return lasted;
+	//free_fuzzy_rules(&g_fuzzy_system);
 }
 
 
@@ -497,7 +492,7 @@ void generateControlSurface_Angle_vs_Angle_Dot(){
 	//-------------------------------------------------
 	
 		
-    //initFuzzySystem(&g_fuzzy_system);	
+    initFuzzySystem(&g_fuzzy_system);	
 	
 	
     float angle_increment;
@@ -556,7 +551,7 @@ void generateControlSurface_Angle_vs_Angle_Dot(){
 			 inputs[in_x] = prevState.x;
 			 inputs[in_x_dot] = prevState.x_dot;
 			
-	         prevState.F = fuzzy_system(inputs, g_fuzzy_system);
+	         prevState.F = 0.0;  //nothing is done.//fuzzy_system(inputs, g_fuzzy_system);
 			
 			
 			 //---------------------------------------------------------------------------
@@ -665,53 +660,19 @@ int main(void) {
    
    initgraph(&graphDriver, &graphMode, "", 800, 600); // Start Window
    clearDataSet();
-   double max_time = 0.1;
    try{
-	    int force_step = 10;
-		int small_upper = 120;
-		int medium_upper = 180;
-		int large_upper = 250;
-	    for (unsigned small = 60; small < small_upper; small+= force_step)
-		{
-			for (unsigned medium = small_upper; medium < medium_upper; medium +=  force_step) {
-				for (unsigned large = medium_upper; large < large_upper; large += force_step)
-				{
-					float A, B, C, D;
-					float coeff_step = 0.1;
-					for (A  = 2; A < 2.6; A+= coeff_step)
-					{
-						for (B = 0.8; B < 1.1; B += coeff_step) {
-							for (C = 1.1; C < 3.0; C += coeff_step) 
-							{
-								for (D = 1.6; D < 3.0; D += coeff_step) {
-									//cout << "Trying " << A << "," << B << "," << C << "," << D << endl;
-									double lasted = runInvertedPendulum(A, B, C, D, small, medium, large);
-									if (lasted > max_time) {
-										cout << "Time: " << lasted << ". A: " << A << ", B: " << B << ", C: " << C << ", D: " << D << ", Small F: " << small << ", Medium F: " << medium <<", Large F: " << large << endl;
-										max_time = lasted;
-									}
-								}
-							}
-						}
-					}
-				}
-				
-			}
-		}
-		
-			
+		runInvertedPendulum();
+	
 		//3) Enable this only after your fuzzy system has been completed already.
-		//generateControlSurface_Angle_vs_Angle_Dot();
+		generateControlSurface_Angle_vs_Angle_Dot();
 		
 		//4) Enable this only after your fuzzy system has been completed already.
-		//saveDataToFile("data_angle_vs_angle_dot.txt");
+		saveDataToFile("data_angle_vs_angle_dot.txt");
 		
    }
    catch(...){
     	cout << "Exception caught!\n";
    }
-	cout << "Simulation is done. Carefully write down the trapezoid, best force levels, best ABCD values." << endl;
-	std::cin.get();
 	return 0;
 } 
 
